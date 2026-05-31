@@ -1,0 +1,306 @@
+import sys
+import os
+import random
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+                             QHBoxLayout, QPushButton, QListWidget, QLabel, QLineEdit, QMessageBox)
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtCore import QUrl
+import folium
+
+# Anadolu Yakası genişletilmiş veri seti
+DIREK_VERILERI = {
+    "MALTEPE_DIREK_1": {"lat": 40.9234, "lon": 29.1312, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_2": {"lat": 40.9345, "lon": 29.1423, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_3": {"lat": 40.9188, "lon": 29.1554, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "PENDIK_DIREK_1": {"lat": 40.8801, "lon": 29.2314, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_2": {"lat": 40.8712, "lon": 29.2425, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_3": {"lat": 40.8944, "lon": 29.2636, "durum": "SAGLAM", "ilce": "Pendik"},
+    "BEYKOZ_DIREK_1": {"lat": 41.1322, "lon": 29.0984, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_2": {"lat": 41.1145, "lon": 29.1123, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_3": {"lat": 41.1566, "lon": 29.0811, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "SULTANBEYLI_DIREK_1": {"lat": 40.9678, "lon": 29.2645, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_2": {"lat": 40.9589, "lon": 29.2756, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SANCAKTEPE_DIREK_1": {"lat": 41.0023, "lon": 29.2212, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_2": {"lat": 40.9912, "lon": 29.2323, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "TUZLA_DIREK_1": {"lat": 40.8245, "lon": 29.3012, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_2": {"lat": 40.8156, "lon": 29.3123, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_3": {"lat": 40.8388, "lon": 29.3354, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "SILE_DIREK_1": {"lat": 41.1745, "lon": 29.6123, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_2": {"lat": 41.1688, "lon": 29.5984, "durum": "SAGLAM", "ilce": "Şile"},
+    "CEKMEKOY_DIREK_2": {"lat": 41.0412, "lon": 29.1855, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_3": {"lat": 41.0523, "lon": 29.1966, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "UMRANIYE_DIREK_1": {"lat": 41.0211, "lon": 29.1245, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_2": {"lat": 41.0123, "lon": 29.1134, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    # --- KADIKÖY BÖLGESİ ---
+    "KADIKOY_DIREK_1": {"lat": 40.9928, "lon": 29.0211, "durum": "SAGLAM", "ilce": "Kadıköy"},
+    "KADIKOY_DIREK_2": {"lat": 40.9715, "lon": 29.0594, "durum": "SAGLAM", "ilce": "Kadıköy"},
+    "KADIKOY_DIREK_3": {"lat": 40.9842, "lon": 29.0318, "durum": "SAGLAM", "ilce": "Kadıköy"},
+    "KADIKOY_DIREK_4": {"lat": 40.9601, "lon": 29.0745, "durum": "SAGLAM", "ilce": "Kadıköy"},
+    "KADIKOY_DIREK_5": {"lat": 40.9954, "lon": 29.0482, "durum": "SAGLAM", "ilce": "Kadıköy"},
+    "KADIKOY_DIREK_6": {"lat": 40.9789, "lon": 29.0155, "durum": "SAGLAM", "ilce": "Kadıköy"},
+    "KADIKOY_DIREK_7": {"lat": 40.9653, "lon": 29.0399, "durum": "SAGLAM", "ilce": "Kadıköy"},
+    "KADIKOY_DIREK_8": {"lat": 40.9881, "lon": 29.0667, "durum": "SAGLAM", "ilce": "Kadıköy"},
+
+    # --- ÜSKÜDAR BÖLGESİ ---
+    "USKUDAR_DIREK_1": {"lat": 41.0112, "lon": 29.0042, "durum": "SAGLAM", "ilce": "Üsküdar"},
+    "USKUDAR_DIREK_2": {"lat": 41.0435, "lon": 29.0521, "durum": "SAGLAM", "ilce": "Üsküdar"},
+    "USKUDAR_DIREK_3": {"lat": 41.0289, "lon": 29.0115, "durum": "SAGLAM", "ilce": "Üsküdar"},
+    "USKUDAR_DIREK_4": {"lat": 41.0567, "lon": 29.0388, "durum": "SAGLAM", "ilce": "Üsküdar"},
+    "USKUDAR_DIREK_5": {"lat": 41.0195, "lon": 29.0441, "durum": "SAGLAM", "ilce": "Üsküdar"},
+    "USKUDAR_DIREK_6": {"lat": 41.0490, "lon": 29.0199, "durum": "SAGLAM", "ilce": "Üsküdar"},
+    "USKUDAR_DIREK_7": {"lat": 41.0314, "lon": 29.0612, "durum": "SAGLAM", "ilce": "Üsküdar"},
+    "USKUDAR_DIREK_8": {"lat": 41.0068, "lon": 29.0276, "durum": "SAGLAM", "ilce": "Üsküdar"},
+
+    # --- ÜMRANİYE BÖLGESİ ---
+    "UMRANIYE_DIREK_1": {"lat": 41.0382, "lon": 29.1044, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_2": {"lat": 41.0115, "lon": 29.1489, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_3": {"lat": 41.0491, "lon": 29.1123, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_4": {"lat": 41.0224, "lon": 29.1567, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_5": {"lat": 41.0553, "lon": 29.1311, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_6": {"lat": 41.0042, "lon": 29.1205, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_7": {"lat": 41.0319, "lon": 29.0914, "durum": "SAGLAM", "ilce": "Ümraniye"},
+    "UMRANIYE_DIREK_8": {"lat": 41.0177, "lon": 29.1392, "durum": "SAGLAM", "ilce": "Ümraniye"},
+
+    # --- ATAŞEHİR BÖLGESİ ---
+    "ATASEHIR_DIREK_1": {"lat": 40.9954, "lon": 29.0912, "durum": "SAGLAM", "ilce": "Ataşehir"},
+    "ATASEHIR_DIREK_2": {"lat": 40.9712, "lon": 29.1254, "durum": "SAGLAM", "ilce": "Ataşehir"},
+    "ATASEHIR_DIREK_3": {"lat": 40.9899, "lon": 29.1011, "durum": "SAGLAM", "ilce": "Ataşehir"},
+    "ATASEHIR_DIREK_4": {"lat": 40.9641, "lon": 29.1178, "durum": "SAGLAM", "ilce": "Ataşehir"},
+    "ATASEHIR_DIREK_5": {"lat": 40.9815, "lon": 29.0833, "durum": "SAGLAM", "ilce": "Ataşehir"},
+    "ATASEHIR_DIREK_6": {"lat": 40.9577, "lon": 29.1094, "durum": "SAGLAM", "ilce": "Ataşehir"},
+    "ATASEHIR_DIREK_7": {"lat": 40.9752, "lon": 29.1399, "durum": "SAGLAM", "ilce": "Ataşehir"},
+    "ATASEHIR_DIREK_8": {"lat": 40.9908, "lon": 29.0745, "durum": "SAGLAM", "ilce": "Ataşehir"},
+
+    # --- BEYKOZ BÖLGESİ ---
+    "BEYKOZ_DIREK_1": {"lat": 41.1542, "lon": 29.0711, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_2": {"lat": 41.1095, "lon": 29.1354, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_3": {"lat": 41.1381, "lon": 29.0912, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_4": {"lat": 41.1214, "lon": 29.1623, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_5": {"lat": 41.1689, "lon": 29.1044, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_6": {"lat": 41.0977, "lon": 29.0833, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_7": {"lat": 41.1453, "lon": 29.1492, "durum": "SAGLAM", "ilce": "Beykoz"},
+    "BEYKOZ_DIREK_8": {"lat": 41.1122, "lon": 29.0578, "durum": "SAGLAM", "ilce": "Beykoz"},
+
+    # --- ÇEKMEKÖY BÖLGESİ ---
+    "CEKMEKOY_DIREK_1": {"lat": 41.0562, "lon": 29.1611, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_2": {"lat": 41.0214, "lon": 29.2145, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_3": {"lat": 41.0449, "lon": 29.1822, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_4": {"lat": 41.0125, "lon": 29.1994, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_5": {"lat": 41.0613, "lon": 29.1756, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_6": {"lat": 41.0318, "lon": 29.1433, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_7": {"lat": 41.0504, "lon": 29.2291, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+    "CEKMEKOY_DIREK_8": {"lat": 41.0189, "lon": 29.1604, "durum": "SAGLAM", "ilce": "Çekmeköy"},
+
+    # --- SANCAKTEPE BÖLGESİ ---
+    "SANCAKTEPE_DIREK_1": {"lat": 41.0185, "lon": 29.2104, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_2": {"lat": 40.9712, "lon": 29.2541, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_3": {"lat": 40.9994, "lon": 29.2299, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_4": {"lat": 40.9625, "lon": 29.2412, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_5": {"lat": 41.0081, "lon": 29.2615, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_6": {"lat": 40.9804, "lon": 29.2154, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_7": {"lat": 40.9919, "lon": 29.2488, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+    "SANCAKTEPE_DIREK_8": {"lat": 40.9693, "lon": 29.2223, "durum": "SAGLAM", "ilce": "Sancaktepe"},
+
+    # --- SULTANBEYLİ BÖLGESİ ---
+    "SULTANBEYLI_DIREK_1": {"lat": 40.9794, "lon": 29.2512, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_2": {"lat": 40.9415, "lon": 29.2984, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_3": {"lat": 40.9652, "lon": 29.2719, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_4": {"lat": 40.9328, "lon": 29.2845, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_5": {"lat": 40.9581, "lon": 29.2599, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_6": {"lat": 40.9490, "lon": 29.3142, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_7": {"lat": 40.9714, "lon": 29.2905, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+    "SULTANBEYLI_DIREK_8": {"lat": 40.9399, "lon": 29.2676, "durum": "SAGLAM", "ilce": "Sultanbeyli"},
+
+    # --- MALTEPE BÖLGESİ ---
+    "MALTEPE_DIREK_1": {"lat": 40.9495, "lon": 29.1121, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_2": {"lat": 40.9082, "lon": 29.1694, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_3": {"lat": 40.9314, "lon": 29.1355, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_4": {"lat": 40.8991, "lon": 29.1842, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_5": {"lat": 40.9410, "lon": 29.1588, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_6": {"lat": 40.9195, "lon": 29.1215, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_7": {"lat": 40.9353, "lon": 29.1739, "durum": "SAGLAM", "ilce": "Maltepe"},
+    "MALTEPE_DIREK_8": {"lat": 40.9122, "lon": 29.1467, "durum": "SAGLAM", "ilce": "Maltepe"},
+
+    # --- KARTAL BÖLGESİ ---
+    "KARTAL_DIREK_1": {"lat": 40.9102, "lon": 29.2015, "durum": "SAGLAM", "ilce": "Kartal"},
+    "KARTAL_DIREK_2": {"lat": 40.8654, "lon": 29.2699, "durum": "SAGLAM", "ilce": "Kartal"},
+    "KARTAL_DIREK_3": {"lat": 40.8941, "lon": 29.2154, "durum": "SAGLAM", "ilce": "Kartal"},
+    "KARTAL_DIREK_4": {"lat": 40.8732, "lon": 29.2512, "durum": "SAGLAM", "ilce": "Kartal"},
+    "KARTAL_DIREK_5": {"lat": 40.9029, "lon": 29.2388, "durum": "SAGLAM", "ilce": "Kartal"},
+    "KARTAL_DIREK_6": {"lat": 40.8795, "lon": 29.1984, "durum": "SAGLAM", "ilce": "Kartal"},
+    "KARTAL_DIREK_7": {"lat": 40.8881, "lon": 29.2745, "durum": "SAGLAM", "ilce": "Kartal"},
+    "KARTAL_DIREK_8": {"lat": 40.8612, "lon": 29.2241, "durum": "SAGLAM", "ilce": "Kartal"},
+
+    # --- PENDİK BÖLGESİ ---
+    "PENDIK_DIREK_1": {"lat": 40.9124, "lon": 29.2745, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_2": {"lat": 40.8512, "lon": 29.2411, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_3": {"lat": 40.8955, "lon": 29.2994, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_4": {"lat": 40.8641, "lon": 29.2315, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_5": {"lat": 40.8809, "lon": 29.2622, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_6": {"lat": 40.8425, "lon": 29.2889, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_7": {"lat": 40.9034, "lon": 29.2510, "durum": "SAGLAM", "ilce": "Pendik"},
+    "PENDIK_DIREK_8": {"lat": 40.8718, "lon": 29.2845, "durum": "SAGLAM", "ilce": "Pendik"},
+
+    # --- TUZLA BÖLGESİ ---
+    "TUZLA_DIREK_1": {"lat": 40.8582, "lon": 29.3411, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_2": {"lat": 40.8045, "lon": 29.3194, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_3": {"lat": 40.8419, "lon": 29.3688, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_4": {"lat": 40.8155, "lon": 29.3005, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_5": {"lat": 40.8491, "lon": 29.3312, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_6": {"lat": 40.7968, "lon": 29.3455, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_7": {"lat": 40.8324, "lon": 29.3142, "durum": "SAGLAM", "ilce": "Tuzla"},
+    "TUZLA_DIREK_8": {"lat": 40.8211, "lon": 29.3756, "durum": "SAGLAM", "ilce": "Tuzla"},
+
+    # --- ŞİLE BÖLGESİ ---
+    "SILE_DIREK_1": {"lat": 41.1985, "lon": 29.5712, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_2": {"lat": 41.1512, "lon": 29.6489, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_3": {"lat": 41.1844, "lon": 29.6015, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_4": {"lat": 41.1629, "lon": 29.6642, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_5": {"lat": 41.2053, "lon": 29.6211, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_6": {"lat": 41.1418, "lon": 29.5894, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_7": {"lat": 41.1766, "lon": 29.6355, "durum": "SAGLAM", "ilce": "Şile"},
+    "SILE_DIREK_8": {"lat": 41.1891, "lon": 29.5542, "durum": "SAGLAM", "ilce": "Şile"}
+}
+
+class AyedasSimulasyonApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Ayedaş ENTER - Çoklu Arıza Simülasyon Arayüzü")
+        self.setGeometry(100, 100, 1300, 850)
+        self.map_path = os.path.abspath("geici_harita.html")
+        
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        main_layout = QHBoxLayout(main_widget)
+        
+        # Sol Kontrol Paneli
+        sol_panel = QVBoxLayout()
+        
+        # Girdi Alanları
+        sol_panel.addWidget(QLabel("<b>Simülasyon Parametreleri</b>"))
+        
+        sol_panel.addWidget(QLabel("1. Yan Yana Kırmızı Olacak Direk Sayısı:"))
+        self.input_yanyana = QLineEdit()
+        self.input_yanyana.setPlaceholderText("Örn: 3")
+        sol_panel.addWidget(self.input_yanyana)
+        
+        sol_panel.addWidget(QLabel("2. Ulaşılacak Toplam Kırmızı Sayısı:"))
+        self.input_toplam = QLineEdit()
+        self.input_toplam.setPlaceholderText("Örn: 7")
+        sol_panel.addWidget(self.input_toplam)
+        
+        # Simülasyonu Tetikleme Butonu
+        self.buton_simule_et = QPushButton("Arızaları Haritaya İşle")
+        self.buton_simule_et.setStyleSheet("background-color: #d9534f; color: white; font-weight: bold;")
+        self.buton_simule_et.clicked.connect(self.toplu_ariza_simule_et)
+        sol_panel.addWidget(self.buton_simule_et)
+        
+        sol_panel.addWidget(QLabel("<br><b>Mevcut Direk Listesi</b>"))
+        self.direk_listesi = QListWidget()
+        self.liste_guncelle()
+        sol_panel.addWidget(self.direk_listesi)
+        
+        # Toplu Sıfırlama Butonu
+        self.buton_sifirla = QPushButton("Tüm Direkleri Sarıya Döndür (Sıfırla)")
+        self.buton_sifirla.setStyleSheet("background-color: #5cb85c; color: white; font-weight: bold;")
+        self.buton_sifirla.clicked.connect(self.tumunu_sari_yap)
+        sol_panel.addWidget(self.buton_sifirla)
+        
+        # Sağ Panel (Harita Görünümü)
+        self.browser = QWebEngineView()
+        
+        main_layout.addLayout(sol_panel, stretch=1)
+        main_layout.addWidget(self.browser, stretch=3)
+        
+        self.harita_uret()
+
+    def harita_uret(self):
+        harita = folium.Map(location=[40.9847, 29.1064], zoom_start=11, tiles="OpenStreetMap")
+        
+        for direk_id, bilgi in DIREK_VERILERI.items():
+            renk = "orange" if bilgi["durum"] == "SAGLAM" else "red"
+            durum_metni = "SAĞLAM (Sarı)" if bilgi["durum"] == "SAGLAM" else "ARIZALI (Kırmızı)"
+            
+            folium.CircleMarker(
+                location=[bilgi["lat"], bilgi["lon"]],
+                radius=10,
+                popup=f"<b>ID:</b> {direk_id}<br><b>İlçe:</b> {bilgi['ilce']}<br><b>Durum:</b> {durum_metni}",
+                color=renk,
+                fill=True,
+                fill_color=renk,
+                fill_opacity=0.8
+            ).add_to(harita)
+            
+        harita.save(self.map_path)
+        self.browser.setUrl(QUrl.fromLocalFile(self.map_path))
+
+    def liste_guncelle(self):
+        self.direk_listesi.clear()
+        for direk_id, bilgi in DIREK_VERILERI.items():
+            self.direk_listesi.addItem(f"{direk_id} - [{bilgi['durum']}] - {bilgi['ilce']}")
+
+    def toplu_ariza_simule_et(self):
+        try:
+            n_yanyana = int(self.input_yanyana.text()) if self.input_yanyana.text() else 0
+            m_toplam = int(self.input_toplam.text()) if self.input_toplam.text() else 0
+        except ValueError:
+            QMessageBox.warning(self, "Hata", "Lütfen geçerli tam sayılar girin!")
+            return
+
+        if m_toplam < n_yanyana:
+            QMessageBox.warning(self, "Hata", "Toplam kırmızı sayısı, yan yana olan sayıdan az olamaz!")
+            return
+
+        # Önce her şeyi temizle/sıfırla ki her simülasyon sıfırdan başlasın
+        for d in DIREK_VERILERI.values():
+            d["durum"] = "SAGLAM"
+
+        # Adım 1: İlk sayı adedince yan yana (aynı ilçede sıralı) olanları kırmızı yap
+        kirmizi_yapilanlar = 0
+        # İlçelere göre gruplayıp sıralı gitmek için
+        ilceler = list(set(d["ilce"] for d in DIREK_VERILERI.values()))
+        
+        for ilce in ilceler:
+            if kirmizi_yapilanlar >= n_yanyana:
+                break
+            # O ilçedeki direkleri bul
+            ilce_direkleri = [k for k, v in DIREK_VERILERI.items() if v["ilce"] == ilce]
+            for d_id in ilce_direkleri:
+                if kirmizi_yapilanlar < n_yanyana:
+                    DIREK_VERILERI[d_id]["durum"] = "ARIZALI"
+                    kirmizi_yapilanlar += 1
+                else:
+                    break
+
+        # Adım 2: İkinci sayıdaki (M) hedefe ulaşana kadar uzak/yakın fark etmeksizin diğerlerini dâhil et
+        mevcut_kirmizi_listesi = [k for k, v in DIREK_VERILERI.items() if v["durum"] == "ARIZALI"]
+        kirmizi_sayisi = len(mevcut_kirmizi_listesi)
+
+        if kirmizi_sayisi < m_toplam:
+            kalan_saglamlar = [k for k, v in DIREK_VERILERI.items() if v["durum"] == "SAGLAM"]
+            ihtiyac = m_toplam - kirmizi_sayisi
+            
+            # Rastgele seçip kırmızıya tamamla
+            secilen_rastgele_direkler = random.sample(kalan_saglamlar, min(ihtiyac, len(kalan_saglamlar)))
+            for d_id in secilen_rastgele_direkler:
+                DIREK_VERILERI[d_id]["durum"] = "ARIZALI"
+
+        # Arayüzü ve Haritayı Yenile
+        self.liste_guncelle()
+        self.harita_uret()
+        QMessageBox.information(self, "Başarılı", "Çoklu arıza senaryosu başarıyla simüle edildi!")
+
+    def tumunu_sari_yap(self):
+        # Tüm veri setini SAĞLAM (Sarı) durumuna geri getirir
+        for direk_id in DIREK_VERILERI.keys():
+            DIREK_VERILERI[direk_id]["durum"] = "SAGLAM"
+            
+        self.liste_guncelle()
+        self.harita_uret()
+        QMessageBox.information(self, "Sıfırlandı", "Tüm direkler başarıyla sarı renge döndürüldü.")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    pencere = AyedasSimulasyonApp()
+    pencere.show()
+    sys.exit(app.exec_())
