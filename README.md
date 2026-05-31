@@ -1,2 +1,4 @@
 # Point-by-point-illuminance-map
-The interactive map we developed for the company over the long term (HE_GURES)
+Interactive map developed during my long-term internship at the company (HE_GURES)
+In order to run the code at Visual Studio Code, 
+Copy and Paste "pip install folium PyQt5 PyQtWebEngine" to terminal
